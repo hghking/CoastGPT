@@ -3,7 +3,7 @@ from typing import Any, Dict
 
 import torch
 import torch.nn as nn
-from torch.cuda.amp import GradScaler, autocast
+from torch.amp import GradScaler, autocast
 from torch.nn.modules.batchnorm import _BatchNorm
 from torch.nn.utils import clip_grad_norm_
 
@@ -15,7 +15,7 @@ logger = logging.getLogger("train")
 def wrap_fp16_model(model):
     """Wrap the FP32 model to FP16.
 
-    If you are using PyTorch >= 1.6, torch.cuda.amp is used as the
+    If you are using PyTorch >= 1.6, torch.amp is used as the
     backend, otherwise, original mmcv implementation will be adopted.
 
     For PyTorch >= 1.6, this function will
@@ -199,7 +199,7 @@ class Fp16OptimizerHook(OptimizerHook):
             Defaults to 512. For Pytorch >= 1.6, mmcv uses official
             implementation of GradScaler. If you use a dict version of
             loss_scale to create GradScaler, please refer to:
-            https://pytorch.org/docs/stable/amp.html#torch.cuda.amp.GradScaler
+            https://pytorch.org/docs/stable/amp.html#torch.amp.GradScaler
             for the parameters.
 
     Examples:
@@ -259,7 +259,7 @@ class Fp16OptimizerHook(OptimizerHook):
     def after_iter(self):
         """Backward optimization steps for Mixed Precision Training. For
         dynamic loss scaling, please refer to
-        https://pytorch.org/docs/stable/amp.html#torch.cuda.amp.GradScaler.
+        https://pytorch.org/docs/stable/amp.html#torch.amp.GradScaler.
 
         1. Scale the loss by a scale factor.
         2. Backward the loss to obtain the gradients.

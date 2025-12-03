@@ -1,4 +1,5 @@
 from .config_parser import ConfigArgumentParser
+from .device import get_autocast_device_type, get_device, is_npu_available
 from .distribute import *
 from .logger import setup_logger
 from .metric import MetricStroge

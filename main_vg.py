@@ -11,6 +11,7 @@ import torch.distributed as dist
 import wandb
 from Trainer import init_distributed
 from Trainer.utils import ConfigArgumentParser, setup_logger, str2bool
+from Trainer.utils.device import get_autocast_device_type, get_device
 from Trainer.utils.distribute import (
     get_rank,
     get_world_size,
@@ -176,17 +177,11 @@ def main(config: ml_collections.ConfigDict):
             logger.info(f"After loading, missing keys: {msg.missing_keys}, unexpected keys: {msg.unexpected_keys}")
             logger.info(str(model))
 
-    if config.accelerator == "gpu":
-        if config.is_distribute:
-            device = torch.device(getattr(config, "local_rank", 0))
-        elif (
-            "CUDA_VISABLE_DEVICES" in os.environ.keys() and len(os.environ["CUDA_VISABLE_DEVICES"].split(",")) == 1
-        ):
-            device = torch.device("cuda:" + os.environ["CUDA_VISABLE_DEVICES"])
-        else:
-            device = torch.device("cuda")
-    else:
-        device = torch.device(config.accelerator)
+    device = get_device(
+        config.accelerator,
+        is_distribute=config.is_distribute,
+        local_rank=getattr(config, "local_rank", None),
+    )
     model.to(device)
     model.eval()
 
@@ -204,7 +199,7 @@ def main(config: ml_collections.ConfigDict):
                 input_ids = input_ids[: image.shape[0]]
 
             with torch.autocast(
-                device_type="cuda" if config.accelerator == "gpu" else "cpu",
+                device_type=get_autocast_device_type(config.accelerator),
                 enabled=config.enable_amp,
                 dtype=dtype,
             ):

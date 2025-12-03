@@ -30,6 +30,8 @@ from .hook import (
 from .utils import (
     MetricStroge,
     gather,
+    get_device,
+    get_autocast_device_type,
     get_rank,
     get_world_size,
     is_main_process,
@@ -98,19 +100,15 @@ class Trainer:
 
         self.dtype = dtype
 
-        if accelerator == "cpu":
-            self.device = torch.device(accelerator)
-            self.autocast_type = "cpu"
-        elif accelerator == "gpu":
-            assert gpus is not None, "if using gpu, please choose the gpu index"
-            if is_distributed:
-                self.device = torch.device(get_rank())
-            else:
-                self.device = torch.device(gpus)
-            self.autocast_type = "cuda"
-        elif accelerator == "mps":
-            self.device = torch.device("mps")
-            self.autocast_type = "cpu"
+        if accelerator in ("cpu", "gpu", "npu", "mps"):
+            device_index = None if gpus is None else int(gpus)
+            self.device = get_device(
+                accelerator,
+                is_distribute=is_distributed,
+                local_rank=get_rank() if is_distributed else None,
+                index=device_index,
+            )
+            self.autocast_type = get_autocast_device_type(accelerator)
         else:
             raise NotImplementedError
 

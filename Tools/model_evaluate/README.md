@@ -7,7 +7,7 @@ python main_cls.py \
      -c configs/inference.yaml \             # config file
      --model-path ${PathToCheckpoint}.pt \   # path to checkpoint end with .pt
      --data-path ${ImageFolder} \            # path to classification image folder
-     --accelerator "gpu" \                   # change if you need ["mps", "cpu", "gpu"]
+     --accelerator "gpu" \                   # change if you need ["mps", "cpu", "gpu", "npu"]
      --workers 4 \
      --enable-amp True \
      --output ${YourOutputDir} \             # Path to output (result, metric etc.)
@@ -28,7 +28,7 @@ python main_vqa_infer.py \
      -c Configs/inference.yaml \              # config file
      --model-path ${PathToCheckpoint}.pt \    # path to checkpoint end with .pt
      --data-path ${Image} \                   # path to image folder
-     --accelerator "gpu" \                    # change if you need ["mps", "cpu", "gpu"]
+     --accelerator "gpu" \                    # change if you need ["mps", "cpu", "gpu", "npu"]
      --workers 2 \
      --enable-amp True \
      --output ${YourOutputDir} \              # Path to output (result, metric etc.)
@@ -56,7 +56,7 @@ python main_vg_infer.py \
      -c Configs/inference.yaml \              # config file
      --model-path ${PathToCheckpoint}.pt \    # path to checkpoint end with .pt
      --data-path ${ImageFolder} \             # path to image folder
-     --accelerator "gpu" \                    # change if you need ["mps", "cpu", "gpu"]
+     --accelerator "gpu" \                    # change if you need ["mps", "cpu", "gpu", "npu"]
      --workers 2 \
      --enable-amp True \
      --output ${YourOutputDir} \              # Path to output (result, metric etc.)

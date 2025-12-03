@@ -66,12 +66,21 @@ def collect_env() -> str:
     cuda_available = torch.cuda.is_available()
     env_info.append(("CUDA available", cuda_available))
 
+    npu_available = hasattr(torch, "npu") and torch.npu.is_available()
+    env_info.append(("NPU available", npu_available))
+
     if cuda_available:
         devices = defaultdict(list)
         for k in range(torch.cuda.device_count()):
             devices[torch.cuda.get_device_name(k)].append(str(k))
         for name, device_ids in devices.items():
             env_info.append(("GPU " + ",".join(device_ids), name))
+    if npu_available:
+        devices = defaultdict(list)
+        for k in range(torch.npu.device_count()):
+            devices[torch.npu.get_device_name(k)].append(str(k))
+        for name, device_ids in devices.items():
+            env_info.append(("NPU " + ",".join(device_ids), name))
 
     env_info.append(("PyTorch", torch.__version__))
 

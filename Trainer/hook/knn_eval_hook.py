@@ -36,7 +36,7 @@ class KnnEvaluate(HookBase):
         self.trainer.model_or_module.eval()
         train_loader, test_loader = self.trainer.eval_data_loader
 
-        with torch.cuda.amp.autocast(enabled=self.enable_amp):
+        with torch.autocast(device_type=self.trainer.autocast_type, enabled=self.enable_amp):
             results_dict_knn = eval_knn(
                 model=self.trainer.model,
                 train_loader=train_loader,

@@ -14,6 +14,37 @@ from torch._C._distributed_c10d import ProcessGroup
 logger = logging.getLogger("train")
 
 
+def _backend_device_type(backend: str) -> str:
+    if backend == "hccl":
+        return "npu"
+    if backend in (torch_dist.Backend.NCCL, "nccl", "smddp"):
+        return "cuda"
+    if backend == "cncl":
+        return "mlu"
+    return "cpu"
+
+
+def _device_count_for_backend(backend: str) -> int:
+    device_type = _backend_device_type(backend)
+    if device_type == "npu" and hasattr(torch, "npu"):
+        return torch.npu.device_count()
+    if device_type == "cuda":
+        return torch.cuda.device_count()
+    if device_type == "mlu" and hasattr(torch, "mlu"):
+        return torch.mlu.device_count()
+    return 1
+
+
+def _set_device_for_backend(backend: str, index: int) -> None:
+    device_type = _backend_device_type(backend)
+    if device_type == "npu" and hasattr(torch, "npu"):
+        torch.npu.set_device(index)
+    elif device_type == "cuda":
+        torch.cuda.set_device(index)
+    elif device_type == "mlu" and hasattr(torch, "mlu"):
+        torch.mlu.set_device(index)
+
+
 def is_distributed() -> bool:
     """Return True if distributed environment has been initialized."""
     return torch_dist.is_available() and torch_dist.is_initialized()
@@ -500,6 +531,10 @@ def _find_free_port() -> int:
 
 
 def deepspeed_init_distributed() -> Tuple[int]:
+    backend = os.environ.get("DIST_BACKEND", None)
+    if backend is None:
+        backend = "hccl" if hasattr(torch, "npu") and torch.npu.is_available() else "nccl"
+
     if "RANK" in os.environ and "WORLD_SIZE" in os.environ:
         # launched by `torch.distributed.launch`
         rank = int(os.environ["RANK"])
@@ -509,15 +544,15 @@ def deepspeed_init_distributed() -> Tuple[int]:
         # launched by slurm
         rank = int(os.environ["SLURM_PROCID"])
         world_size = int(os.environ["SLURM_NTASKS"])
-        local_rank = rank % torch.cuda.device_count()
+        local_rank = rank % _device_count_for_backend(backend)
     else:
         print("Not using distributed mode.")
         return 0, 0, 1
 
     print(f"| distributed init (rank {rank})", flush=True)
-    deepspeed.init_distributed()
+    deepspeed.init_distributed(backend=backend)
     torch_dist.barrier()
-    torch.cuda.set_device(local_rank)
+    _set_device_for_backend(backend, local_rank)
     setup_print_for_distributed(rank == 0)
     return rank, local_rank, world_size
 
@@ -536,6 +571,10 @@ def init_distributed(auto: bool = False) -> Tuple[int]:
     Returns:
         tuple: (``rank``, ``local_rank``, ``world_size``)
     """
+    backend = os.environ.get("DIST_BACKEND", None)
+    if backend is None:
+        backend = "hccl" if hasattr(torch, "npu") and torch.npu.is_available() else "nccl"
+
     if "RANK" in os.environ and "WORLD_SIZE" in os.environ:
         # launched by `torch.distributed.launch`
         rank = int(os.environ["RANK"])
@@ -545,7 +584,7 @@ def init_distributed(auto: bool = False) -> Tuple[int]:
         # launched by slurm
         rank = int(os.environ["SLURM_PROCID"])
         world_size = int(os.environ["SLURM_NTASKS"])
-        local_rank = rank % torch.cuda.device_count()
+        local_rank = rank % _device_count_for_backend(backend)
     else:
         print("Not using distributed mode.")
         return 0, 0, 1
@@ -566,8 +605,8 @@ def init_distributed(auto: bool = False) -> Tuple[int]:
             os.environ["MASTER_PORT"] = new_port
 
     print(f"| distributed init (rank {rank})", flush=True)
-    torch_dist.init_process_group(backend="nccl")
+    torch_dist.init_process_group(backend=backend)
     torch_dist.barrier()
-    torch.cuda.set_device(local_rank)
+    _set_device_for_backend(backend, local_rank)
     setup_print_for_distributed(rank == 0)
     return rank, local_rank, world_size

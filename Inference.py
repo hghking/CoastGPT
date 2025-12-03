@@ -8,6 +8,7 @@ from PIL import Image
 from transformers import TextStreamer
 
 from Trainer.utils import ConfigArgumentParser, str2bool
+from Trainer.utils.device import get_device
 from Dataset.build_transform import build_vlp_transform
 from Dataset.conversation import SeparatorStyle, default_conversation
 from Models import (
@@ -114,10 +115,7 @@ def main(config: ml_collections.ConfigDict):
             tokenizer = model.language.tokenizer
         print(msg)
 
-    if config.accelerator == "gpu":
-        device = torch.device("cuda")
-    else:
-        device = torch.device(config.accelerator)
+    device = get_device(config.accelerator)
     model.to(device)
 
     if config.image_file is not None:

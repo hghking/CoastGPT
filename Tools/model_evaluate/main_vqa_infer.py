@@ -24,6 +24,7 @@ import torch.distributed as dist  # 分布式训练支持
 import wandb  # 实验跟踪和可视化工具
 from Trainer import init_distributed
 from Trainer.utils import ConfigArgumentParser, setup_logger, str2bool
+from Trainer.utils.device import get_autocast_device_type, get_device
 from Trainer.utils.distribute import (
     get_rank,
     get_world_size,
@@ -226,10 +227,7 @@ def main(config: ml_collections.ConfigDict):
             logger.info(str(model))
 
     # 设置设备
-    if config.accelerator == "gpu":
-        device = torch.device("cuda")
-    else:
-        device = torch.device(config.accelerator)
+    device = get_device(config.accelerator)
     model.to(device)
     model.eval()  # 设置为评估模式
 
@@ -253,7 +251,7 @@ def main(config: ml_collections.ConfigDict):
 
             # 使用自动混合精度（如果启用）
             with torch.autocast(
-                device_type="cuda" if config.accelerator == "gpu" else "cpu",
+                device_type=get_autocast_device_type(config.accelerator),
                 enabled=config.enable_amp,
                 dtype=dtype,
             ):
